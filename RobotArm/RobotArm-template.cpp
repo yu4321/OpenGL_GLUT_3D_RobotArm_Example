@@ -435,7 +435,7 @@ void Keyboard(unsigned char key, int x, int y)
 			auto maxPos = value >0 ? abs(target->jointLimits->y) : abs(target->jointLimits->x);
 
 			if (value > 0) {
-				if (abs (curPos-maxPos) > 0.1) {
+				if (abs (curPos-maxPos) > 0.05) {
 					target->block->position->x += value;
 					subTarget->block->position->x -= value;
 				}
