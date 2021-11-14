@@ -52,10 +52,6 @@ public:
 	}
 };
 
-
-
-
-
 // 윈도우 크기
 int Width = 800, Height = 800;
 
@@ -68,8 +64,8 @@ float RotMat[16] = { 1, 0, 0, 0,
 					0, 1, 0, 0,
 					0, 0, 1, 0,
 					0, 0, 0, 1 };
-float Zoom = -30.0;
-float Pan[3] = { 0.0, 0.0, 0.0 };
+float Zoom = -50;
+float Pan[3] = { 0.0, -3.0, 0.0 };
 
 // 콜백 함수들
 void Reshape(int w, int h);
@@ -100,10 +96,10 @@ void DrawBlocksRecursive(Block* block, Block* ancestor,GLfloat over);
 //추가 구현 변수들
 vector<Block*> blocks;
 
-Block* rotater;
-Block* ball;
-Block* sliderL;
-Block* sliderR;
+AttachData* rotater;
+AttachData* ball;
+AttachData* sliderL;
+AttachData* sliderR;
 
 
 void Cross(double out[3], double a[3], double b[3])
@@ -166,6 +162,12 @@ void InitializeBlocks()
 	base->rotation = new Vector3(0, 1, 0);
 	blocks.push_back(base);
 
+	AttachData* data0 = new AttachData(new Vector3(), base, Rotate);
+
+
+	rotater = data0;
+
+
 	Block* lower = new Block();
 	lower->position = new Vector3(0, 3, 0);
 	lower->size = new Vector3(1, 5, 1);
@@ -173,10 +175,7 @@ void InitializeBlocks()
 	lower->textureType = 2;
 	lower->rotation = new Vector3(0, 1, 0);
 
-	AttachData data1(base->position, lower, Rotate);
-
-	rotater = base;
-	
+	AttachData* data1 = new AttachData(base->position, lower, NotJoint);
 
 	Block* center = new Block();
 	center->shapeType = 2;
@@ -185,15 +184,15 @@ void InitializeBlocks()
 	center->textureType = 3;
 	center->rotation = new Vector3(0,0,1);
 
-	AttachData data2(lower->position, center, Ball);
-	ball = center;
+	AttachData* data2 = new AttachData(lower->position, center, Ball);
+	ball = data2;
 
 	Block* upper = new Block();
 	upper->position = new Vector3(0, 3, 0);
 	upper->size = new Vector3(1, 5, 1);
 	upper->shapeType = 1;
 	upper->textureType = 4;
-	AttachData data3(center->position, upper, NotJoint);
+	AttachData* data3 = new AttachData(center->position, upper, NotJoint);
 	
 
 	Block* clawL = new Block();
@@ -202,9 +201,9 @@ void InitializeBlocks()
 	clawL->shapeType = 1;
 	clawL->textureType = 5;
 
-	AttachData data4A(upper->position, clawL, Slide);
-	data4A.attachedPosition = new Vector3(0.5, 0, 0);
-	sliderL = clawL;
+	AttachData* data4A = new AttachData(upper->position, clawL, Slide);
+	data4A->attachedPosition = new Vector3(0.5, 0.05, 0);
+	sliderL = data4A;
 
 
 	Block* clawR = new Block();
@@ -213,14 +212,14 @@ void InitializeBlocks()
 	clawR->shapeType = 1;
 	clawR->textureType = 6;
 
-	AttachData data4B(upper->position, clawR, Slide);
-	data4A.attachedPosition = new Vector3(-0.5, 0, 0);
-	sliderR = clawR;
+	AttachData* data4B = new AttachData(upper->position, clawR, Slide);
+	data4B->attachedPosition = new Vector3(-0.5, -0.05, 0);
+	sliderR = data4B;
 
-	upper->attached->push_back(data4A); upper->attached->push_back(data4B);
-	center->attached->push_back(data3);
-	lower->attached->push_back(data2);
-	base->attached->push_back(data1);
+	upper->attached->push_back(*data4A); upper->attached->push_back(*data4B);
+	center->attached->push_back(*data3);
+	lower->attached->push_back(*data2);
+	base->attached->push_back(*data1);
 	blocks.push_back(base);
 }
 
@@ -248,7 +247,7 @@ void GiveMaterial(Block* blk)
 			break;
 		}
 		case 5: {
-			float mat0_diffuse[] = { 1.0, 1.0, 1.0 };
+			float mat0_diffuse[] = { 0.1, 0.1, 0.1 };
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
 			break;
 		}
@@ -382,9 +381,9 @@ void DrawBlocksRecursive(Block* block) {
 
 void Keyboard(unsigned char key, int x, int y)
 {
-	Block* target = NULL;
-	Block* subTarget = NULL;
-	JointType jointType = NotJoint;
+	AttachData* target = NULL;
+	AttachData* subTarget = NULL;
+	//JointType jointType = NotJoint;
 	float value = 0;
 	cout << "pressed key " << key << endl;
 	switch (key)
@@ -392,32 +391,60 @@ void Keyboard(unsigned char key, int x, int y)
 		case '1':
 		case '2':
 			target = rotater;
-			jointType = Rotate;
+			//jointType = Rotate;
 			value = key == '1' ? 1 : -1;
 			break;
 		case '3':
 		case '4':
 			target = ball;
-			jointType = Ball;
+			//jointType = Ball;
 			value = key == '3' ? 1 : -1;
 			break;
 		case '5':
 		case '6':
 			target = sliderL;
 			subTarget = sliderR;
-			jointType = Slide;
-			value = 0.1;
+			//jointType = Slide;
+			value = key == '5' ? 0.05 : -0.05;
 			break;
+		case '0':
+			if (ball != NULL && sliderL != NULL && sliderR != NULL && rotater != NULL) {
+				ball->block->rotateAngle = 0;
+				sliderL->block->position->x = sliderL->attachedPosition->x * -1;
+				sliderR->block->position->x = sliderR->attachedPosition->x * -1;
+				rotater->block->rotateAngle = 0;
+			}
+			//return;
 		default:
 			break;
 	}
 
 	if (target != NULL) {
-		if (jointType == Ball || jointType == Rotate) {
-			target->rotateAngle += value;
+		if (target->jointType == Ball || target->jointType == Rotate) {
+			target->block->rotateAngle += value;
 		}
-		else if (jointType == Slide) {
+		else if (target->jointType == Slide) {
+			auto curPos = abs(target->block->position->x);
+			auto maxPos = value >0 ? abs(target->attachedPosition->y) : abs(target->attachedPosition->x);
+			//auto minPos = abs(target->attachedPosition->y);
 
+			if (value > 0) {
+				if (abs (curPos-maxPos) > 0.1) {
+					target->block->position->x += value;
+					subTarget->block->position->x -= value;
+				}
+				else {
+					target->block->position->x = -maxPos;
+					subTarget->block->position->x = maxPos;
+				}
+			}
+			else {
+				if (curPos < maxPos) {
+					target->block->position->x += value;
+					subTarget->block->position->x -= value;
+				}
+
+			}
 		}
 	}
 	glutPostRedisplay();
