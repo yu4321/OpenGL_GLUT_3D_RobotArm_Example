@@ -9,7 +9,7 @@ using namespace std;
 
 enum JointType
 {
-	NotJoint, Ball, OneSide, Slide
+	NotJoint, Ball, Rotate, Slide
 };
 
 //class Joint;
@@ -100,6 +100,11 @@ void DrawBlocksRecursive(Block* block, Block* ancestor,GLfloat over);
 //추가 구현 변수들
 vector<Block*> blocks;
 
+Block* rotater;
+Block* ball;
+Block* sliderL;
+Block* sliderR;
+
 
 void Cross(double out[3], double a[3], double b[3])
 {
@@ -152,7 +157,7 @@ int main(int argc, char **argv)
 
 void InitializeBlocks() 
 {
-	// 구현 하세요.
+	//auto f = fopen("modelDatas.csv");
 	Block* base = new Block();
 	base->position = new Vector3(0, 0.5, 0);
 	base->size = new Vector3(10, 1, 10);
@@ -165,20 +170,21 @@ void InitializeBlocks()
 	lower->size = new Vector3(1, 5, 1);
 	lower->shapeType = 1;
 	lower->textureType = 2;
+	lower->rotation = new Vector3(0, 1, 0);
 
-	AttachData data1(base->position, lower, NotJoint);
-	//blocks.push_back(lower);
+	AttachData data1(base->position, lower, Rotate);
+	rotater = lower;
+	
 
 	Block* center = new Block();
 	center->shapeType = 2;
 	center->position = new Vector3(0, 0.5, 0);
 	center->size = new Vector3(1, 1, 1);
 	center->textureType = 3;
-	center->rotateAngle = 30;
-
 	center->rotation = new Vector3(0,0,1);
+
 	AttachData data2(lower->position, center, Ball);
-	//blocks.push_back(center);
+	ball = center;
 
 	Block* upper = new Block();
 	upper->position = new Vector3(0, 3, 0);
@@ -186,15 +192,17 @@ void InitializeBlocks()
 	upper->shapeType = 1;
 	upper->textureType = 4;
 	AttachData data3(center->position, upper, NotJoint);
-	//blocks.push_back(upper);
+	
 
 	Block* clawL = new Block();
 	clawL->position = new Vector3(-0.5, 0.7, 0);
 	clawL->size = new Vector3(0.1, 2, 1.0);
 	clawL->shapeType = 1;
 	clawL->textureType = 5;
+
 	AttachData data4A(upper->position, clawL, Slide);
-	//blocks.push_back(clawL);
+	data4A.attachedPosition = new Vector3(0.5, 0, 0);
+	sliderL = clawL;
 
 
 	Block* clawR = new Block();
@@ -202,14 +210,16 @@ void InitializeBlocks()
 	clawR->size = new Vector3(0.1, 2, 1.0);
 	clawR->shapeType = 1;
 	clawR->textureType = 6;
+
 	AttachData data4B(upper->position, clawR, Slide);
+	data4A.attachedPosition = new Vector3(-0.5, 0, 0);
+	sliderR = clawR;
 
 	upper->attached->push_back(data4A); upper->attached->push_back(data4B);
 	center->attached->push_back(data3);
 	lower->attached->push_back(data2);
 	base->attached->push_back(data1);
 	blocks.push_back(base);
-	//blocks.push_back(clawR);
 }
 
 void GiveMaterial(Block* blk) 
@@ -334,13 +344,12 @@ void DrawBlocksRecursive(Block* block) {
 	{
 		GiveMaterial(block);
 		glTranslatef(block->position->x, block->position->y, block->position->z);
-		glRotatef(block->rotateAngle, block->rotation->x, block->rotation->y, block->rotation->z);
 		glScalef(block->size->x, block->size->y, block->size->z);
 		if (block->shapeType == 1)
 			glutSolidCube(1.0);
 		else
 			glutSolidSphere(1.0, 50, 50);
-
+		glRotatef(block->rotateAngle, block->rotation->x, block->rotation->y, block->rotation->z);
 		vector<AttachData> atch = *(block->attached);
 		for (auto a : atch)
 			DrawBlocksRecursive(a.block,block,  block->size->y);
@@ -371,7 +380,39 @@ void DrawBlocksRecursive(Block* block) {
 
 void Keyboard(unsigned char key, int x, int y)
 {
-	// 구현 하세요.
+	Block* target = NULL;
+	JointType jointType = NotJoint;
+	float value = 0;
+	switch (key)
+	{
+		case '1':
+		case '2':
+			target = rotater;
+			jointType = Rotate;
+			value = key == '1' ? 1 : -1;
+			break;
+		case '3':
+		case '4':
+			target = ball;
+			jointType = Ball;
+			value = key == '3' ? 1 : -1;
+			break;
+		case '5':
+		case '6':
+			target = sliderR;
+			jointType = Slide;
+			value = key == '5' ? 0.1 : -0.1;
+			break;
+		default:
+			break;
+	}
+
+	if (target != NULL) {
+		if (jointType == Ball || jointType == Rotate) {
+			target->rotateAngle += value;
+		}
+	}
+	glutPostRedisplay();
 }
 
 void drawCube(float sx, float sy, float sz)
