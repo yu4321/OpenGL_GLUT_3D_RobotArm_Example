@@ -142,10 +142,7 @@ void DrawBlocksRecursive(Block* block, Block* ancestor);
 //추가 구현 변수들
 
 vector<Block*> blocks;
-AttachData* rotater;
-AttachData* ball;
-AttachData* sliderL;
-AttachData* sliderR;
+vector<AttachData*> joints;
 
 #pragma endregion
 
@@ -159,7 +156,7 @@ int main(int argc, char **argv)
 	glutInitWindowSize(Width, Height);
 	glutCreateWindow("HW2_2015110758");
 
-	cout << "1 : 바닥 시계 회전 2: 바닥 반시계 회전 3: 팔 시계 회전 4: 팔 반시계 회전 5: 집게 좁히기 6: 집게 벌리기" << endl;
+	cout << "1 : 바닥 시계 회전 2: 바닥 반시계 회전 3: 팔 시계 회전 4: 팔 반시계 회전 5: 집게 좁히기 6: 집게 벌리기 0 : 초기화" << endl;
 
 	/// 블록 목록 초기화
 	InitializeBlocks();
@@ -184,7 +181,7 @@ int main(int argc, char **argv)
 
 
 /// <summary>
-/// 로봇팔 모양으로 블록 초기화. 관절 등록만 동적으로 바꿔준다면 별도 데이터 파일 읽는 구조로도 변형 가능 + 세로 쌓기 모델이라면 범용 사용 가능
+/// 로봇팔 모양으로 블록 초기화. 별도 데이터 파일 읽는 구조로도 변형 가능 + 세로로 쌓는 모형이라면 범용 사용 가능
 /// </summary>
 void InitializeBlocks()
 {
@@ -197,8 +194,6 @@ void InitializeBlocks()
 	blocks.push_back(base);
 
 	AttachData* data0 = new AttachData(new Vector3(), base, Horizontal);
-
-	rotater = data0;
 
 	Block* lower = new Block();
 	lower->position = new Vector3(0, 3, 0);
@@ -217,7 +212,6 @@ void InitializeBlocks()
 	center->rotation = new Vector3(0, 0, 1);
 
 	AttachData* data2 = new AttachData(lower->position, center, Vertical);
-	ball = data2;
 
 	Block* upper = new Block();
 	upper->position = new Vector3(0, 3, 0);
@@ -233,8 +227,7 @@ void InitializeBlocks()
 	clawL->textureType = 5;
 
 	AttachData* data4A = new AttachData(upper->position, clawL, Slide);
-	data4A->jointLimits = new Vector3(0.5, 0.05, 0);
-	sliderL = data4A;
+	data4A->jointLimits = new Vector3(-0.5, -0.05, 0);
 
 
 	Block* clawR = new Block();
@@ -244,8 +237,7 @@ void InitializeBlocks()
 	clawR->textureType = 6;
 
 	AttachData* data4B = new AttachData(upper->position, clawR, Slide);
-	data4B->jointLimits = new Vector3(-0.5, -0.05, 0);
-	sliderR = data4B;
+	data4B->jointLimits = new Vector3(0.5, 0.05, 0);
 
 	upper->attached->push_back(*data4A); upper->attached->push_back(*data4B);
 	center->attached->push_back(*data3);
@@ -253,6 +245,8 @@ void InitializeBlocks()
 	base->attached->push_back(*data1);
 
 	blocks.push_back(base);
+
+	joints.push_back(data4A);joints.push_back(data4B); joints.push_back(data0); joints.push_back(data2);
 }
 
 /// <summary>
@@ -394,65 +388,101 @@ void Render()
 /// <param name="y"></param>
 void Keyboard(unsigned char key, int x, int y)
 {
-	AttachData* target = NULL;
-	AttachData* subTarget = NULL;
+	vector<AttachData*> targets;
 	float value = 0;
 	switch (key)
 	{
 		case '1':
 		case '2':
-			target = rotater;
+			for (auto j : joints)
+				if (j->jointType == Horizontal)
+					targets.push_back(j);
 			value = key == '1' ? -1 : 1;
 			break;
 		case '3':
 		case '4':
-			target = ball;
+			for (auto j : joints)
+				if (j->jointType == Vertical)
+					targets.push_back(j);
 			value = key == '3' ? -1 : 1;
 			break;
 		case '5':
 		case '6':
-			target = sliderL;
-			subTarget = sliderR;
-			value = key == '5' ? 0.05 : -0.05;
+			for (auto j : joints)
+				if (j->jointType == Slide)
+					targets.push_back(j);
+			value = key == '5' ? -0.05 : 0.05;
 			break;
 		case '0':
-			if (ball != NULL && sliderL != NULL && sliderR != NULL && rotater != NULL) {
-				ball->block->rotateAngle = 0;
-				sliderL->block->position->x = sliderL->jointLimits->x * -1;
-				sliderR->block->position->x = sliderR->jointLimits->x * -1;
-				rotater->block->rotateAngle = 0;
+			for (auto j : joints) {
+				if (j->jointType == Vertical || j->jointType == Horizontal)
+					j->block->rotateAngle = 0;
+				else if (j->jointType == Slide)
+					j->block->position->x = j->jointLimits->x;
 			}
 		default:
 			break;
 	}
 
-	if (target != NULL) {
-		if (target->jointType == Vertical || target->jointType == Horizontal) {
-			target->block->rotateAngle += value;
-		}
-		else if (target->jointType == Slide) {
-			auto curPos = abs(target->block->position->x);
-			auto maxPos = value >0 ? abs(target->jointLimits->y) : abs(target->jointLimits->x);
+	if (!targets.empty()) {
+		for (auto j : targets) {
+			if (j->jointType == Vertical || j->jointType == Horizontal)
+				j->block->rotateAngle += value;
+			else if (j->jointType == Slide) {
+				auto curPos = j->block->position->x;
+				auto maxPos = j->jointLimits->x;
+				auto minPos = j->jointLimits->y;
+				float inverse = maxPos>0 ? 1 : -1;
 
-			if (value > 0) {
-				if (abs (curPos-maxPos) > 0.05) {
-					target->block->position->x += value;
-					subTarget->block->position->x -= value;
+				//좁히기
+				if (value < 0) {
+					if (abs(curPos - minPos) > 0.05) {
+						j->block->position->x -= value * -inverse;
+					}
+					else {
+						j->block->position->x = minPos;
+					}
 				}
 				else {
-					target->block->position->x = -maxPos;
-					subTarget->block->position->x = maxPos;
-				}
-			}
-			else {
-				if (curPos < maxPos) {
-					target->block->position->x += value;
-					subTarget->block->position->x -= value;
-				}
+					if (abs(curPos - maxPos) > 0.05) {
+						j->block->position->x += value * inverse;
+					}
+					else {
+						j->block->position->x = maxPos;
+					}
 
+				}
 			}
 		}
 	}
+
+	//if (target != NULL) {
+	//	if (target->jointType == Vertical || target->jointType == Horizontal) {
+	//		target->block->rotateAngle += value;
+	//	}
+	//	else if (target->jointType == Slide) {
+	//		auto curPos = abs(target->block->position->x);
+	//		auto maxPos = value >0 ? abs(target->jointLimits->y) : abs(target->jointLimits->x);
+
+	//		if (value > 0) {
+	//			if (abs (curPos-maxPos) > 0.05) {
+	//				target->block->position->x += value;
+	//				subTarget->block->position->x -= value;
+	//			}
+	//			else {
+	//				target->block->position->x = -maxPos;
+	//				subTarget->block->position->x = maxPos;
+	//			}
+	//		}
+	//		else {
+	//			if (curPos < maxPos) {
+	//				target->block->position->x += value;
+	//				subTarget->block->position->x -= value;
+	//			}
+
+	//		}
+	//	}
+	//}
 	glutPostRedisplay();
 }
 
