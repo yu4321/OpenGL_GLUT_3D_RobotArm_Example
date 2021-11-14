@@ -1,3 +1,8 @@
+/*
+2015110758 류영석 2021-2 컴퓨터 그래픽스 과제 2
+추가 기능: 모델 별 질감은 glMaterialfv만 써서 다르게 설정, 0 누르면 모든 회전 초기 위치로 복귀
+*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <cmath>
@@ -7,12 +12,13 @@
 
 using namespace std;
 
+#pragma region 신규 클래스, enum등
+
 enum JointType
 {
-	NotJoint, Ball, Rotate, Slide
+	NotJoint, Vertical, Horizontal, Slide
 };
 
-//class Joint;
 class Block;
 class Vector3;
 class AttachData;
@@ -28,29 +34,45 @@ public:
 	}
 };
 
+/// <summary>
+/// 각 블록을 나타내는 클래스
+/// </summary>
 class Block {
 public:
-	vector<AttachData>* attached=new vector<AttachData>();
+	vector<AttachData>* attached = new vector<AttachData>();
 	Vector3* size = new Vector3();
 	Vector3* position = new Vector3();
 	Vector3* rotation = new Vector3();
 	float rotateAngle;
+	/// <summary>
+	/// 1~6까지 존재
+	/// </summary>
 	int textureType;
+	/// <summary>
+	/// 1: 큐브 2: 스피어
+	/// </summary>
 	int shapeType;
 };
 
+/// <summary>
+/// 블록의 관절 정보
+/// </summary>
 class AttachData {
 public:
-	Vector3 *attachedPosition = new Vector3();
-	Block *block;
+	/// <summary>
+	/// slider 관절의 이동 범위 제한. x: 최댓값 y: 최솟값 z: Reserved
+	/// </summary>
+	Vector3* jointLimits = new Vector3();
+	Block* block;
 	JointType jointType;
 
 	AttachData(Vector3* pos, Block* blk, JointType jt) {
-		attachedPosition = pos;
+		jointLimits = pos;
 		block = blk;
 		jointType = jt;
 	}
 };
+#pragma endregion
 
 // 윈도우 크기
 int Width = 800, Height = 800;
@@ -87,21 +109,6 @@ void Sub(double out[3], double a[3], double b[3]);
 void Add(double out[3], double a[3], double b[3]);
 void Cross(double out[3], double a[3], double b[3]);
 
-//추가 구현 함수들
-void InitializeBlocks();
-void GiveMaterial(Block* blk);
-void DrawBlocksRecursive(Block* block);
-void DrawBlocksRecursive(Block* block, Block* ancestor,GLfloat over);
-
-//추가 구현 변수들
-vector<Block*> blocks;
-
-AttachData* rotater;
-AttachData* ball;
-AttachData* sliderL;
-AttachData* sliderR;
-
-
 void Cross(double out[3], double a[3], double b[3])
 {
 	out[0] = a[1] * b[2] - a[2] * b[1];
@@ -123,6 +130,25 @@ void Add(double out[3], double a[3], double b[3])
 	out[2] = a[2] + b[2];
 }
 
+#pragma region 추가 구현 선언
+
+//추가 구현 함수들
+
+void InitializeBlocks();
+void GiveMaterial(Block* blk);
+void DrawBlocksRecursive(Block* block);
+void DrawBlocksRecursive(Block* block, Block* ancestor);
+
+//추가 구현 변수들
+
+vector<Block*> blocks;
+AttachData* rotater;
+AttachData* ball;
+AttachData* sliderL;
+AttachData* sliderR;
+
+#pragma endregion
+
 int main(int argc, char **argv)
 {
 	// GLUT 초기화(더블 칼라버퍼, RBGA, 깊이버퍼 사용)
@@ -131,8 +157,11 @@ int main(int argc, char **argv)
 
 	// 윈도우 생성
 	glutInitWindowSize(Width, Height);
-	glutCreateWindow("3DViewer");
+	glutCreateWindow("HW2_2015110758");
 
+	cout << "1 : 바닥 시계 회전 2: 바닥 반시계 회전 3: 팔 시계 회전 4: 팔 반시계 회전 5: 집게 좁히기 6: 집게 벌리기" << endl;
+
+	/// 블록 목록 초기화
 	InitializeBlocks();
 
 	// OpenGL 초기화
@@ -151,9 +180,14 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void InitializeBlocks() 
+#pragma region 추가 구현 함수 본문
+
+
+/// <summary>
+/// 로봇팔 모양으로 블록 초기화. 관절 등록만 동적으로 바꿔준다면 별도 데이터 파일 읽는 구조로도 변형 가능 + 세로 쌓기 모델이라면 범용 사용 가능
+/// </summary>
+void InitializeBlocks()
 {
-	//auto f = fopen("modelDatas.csv");
 	Block* base = new Block();
 	base->position = new Vector3(0, 0.5, 0);
 	base->size = new Vector3(10, 1, 10);
@@ -162,11 +196,9 @@ void InitializeBlocks()
 	base->rotation = new Vector3(0, 1, 0);
 	blocks.push_back(base);
 
-	AttachData* data0 = new AttachData(new Vector3(), base, Rotate);
-
+	AttachData* data0 = new AttachData(new Vector3(), base, Horizontal);
 
 	rotater = data0;
-
 
 	Block* lower = new Block();
 	lower->position = new Vector3(0, 3, 0);
@@ -182,9 +214,9 @@ void InitializeBlocks()
 	center->position = new Vector3(0, 0.5, 0);
 	center->size = new Vector3(1, 1, 1);
 	center->textureType = 3;
-	center->rotation = new Vector3(0,0,1);
+	center->rotation = new Vector3(0, 0, 1);
 
-	AttachData* data2 = new AttachData(lower->position, center, Ball);
+	AttachData* data2 = new AttachData(lower->position, center, Vertical);
 	ball = data2;
 
 	Block* upper = new Block();
@@ -193,7 +225,6 @@ void InitializeBlocks()
 	upper->shapeType = 1;
 	upper->textureType = 4;
 	AttachData* data3 = new AttachData(center->position, upper, NotJoint);
-	
 
 	Block* clawL = new Block();
 	clawL->position = new Vector3(-0.5, 0.7, 0);
@@ -202,7 +233,7 @@ void InitializeBlocks()
 	clawL->textureType = 5;
 
 	AttachData* data4A = new AttachData(upper->position, clawL, Slide);
-	data4A->attachedPosition = new Vector3(0.5, 0.05, 0);
+	data4A->jointLimits = new Vector3(0.5, 0.05, 0);
 	sliderL = data4A;
 
 
@@ -213,52 +244,113 @@ void InitializeBlocks()
 	clawR->textureType = 6;
 
 	AttachData* data4B = new AttachData(upper->position, clawR, Slide);
-	data4B->attachedPosition = new Vector3(-0.5, -0.05, 0);
+	data4B->jointLimits = new Vector3(-0.5, -0.05, 0);
 	sliderR = data4B;
 
 	upper->attached->push_back(*data4A); upper->attached->push_back(*data4B);
 	center->attached->push_back(*data3);
 	lower->attached->push_back(*data2);
 	base->attached->push_back(*data1);
+
 	blocks.push_back(base);
 }
 
-void GiveMaterial(Block* blk) 
+/// <summary>
+/// 정해진 색상별로 GL_DIFFUSE 부여
+/// </summary>
+/// <param name="blk"></param>
+void GiveMaterial(Block* blk)
 {
 	switch (blk->textureType) {
-		case 1: {
-			float mat0_diffuse[] = { 0.6, 0.6, 0.0 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-		}
-		case 2: {
-			float mat0_diffuse[] = { 0.5, 0.6, 0.5 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-		}
-		case 3: {
-			float mat0_diffuse[] = { 0.1, 0.1, 0.7 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-		}
-		case 4: {
-			float mat0_diffuse[] = { 0.7, 0.0, 1.0 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-		}
-		case 5: {
-			float mat0_diffuse[] = { 0.1, 0.1, 0.1 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-		}
-		case 6: {
-			float mat0_diffuse[] = { 0, 0, 0 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-		}
+	case 1: {
+		float mat0_diffuse[] = { 0.6, 0.6, 0.0 };
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+		break;
+	}
+	case 2: {
+		float mat0_diffuse[] = { 0.5, 0.6, 0.5 };
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+		break;
+	}
+	case 3: {
+		float mat0_diffuse[] = { 0.1, 0.1, 0.7 };
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+		break;
+	}
+	case 4: {
+		float mat0_diffuse[] = { 0.7, 0.0, 1.0 };
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+		break;
+	}
+	case 5: {
+		float mat0_diffuse[] = { 0.1, 0.1, 0.1 };
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+		break;
+	}
+	default: {
+		float mat0_diffuse[] = { 0, 0, 0 };
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+		break;
+	}
 	}
 }
 
+/// <summary>
+/// 재귀적으로 모델링 생성하여 상위 Matrix의 자식으로 넣음. 최초 호출용
+/// </summary>
+/// <param name="block"></param>
+void DrawBlocksRecursive(Block* block) {
+	glPushMatrix();
+	{
+		GiveMaterial(block);
+		glTranslatef(block->position->x, block->position->y, block->position->z);
+		glScalef(block->size->x, block->size->y, block->size->z);
+		if (block->shapeType == 1)
+			glutSolidCube(1.0);
+		else
+			glutSolidSphere(1.0, 50, 50);
+		glRotatef(block->rotateAngle, block->rotation->x, block->rotation->y, block->rotation->z);
+		vector<AttachData> atch = *(block->attached);
+		for (auto a : atch)
+			DrawBlocksRecursive(a.block, block);
+	}
+	glPopMatrix();
+}
+
+/// <summary>
+/// 재귀적으로 모델링 생성하여 상위 Matrix의 자식으로 넣음. 
+/// </summary>
+/// <param name="block"></param>
+/// <param name="ancestor"></param>
+void DrawBlocksRecursive(Block* block, Block* ancestor) {
+	glPushMatrix();
+	{
+		GiveMaterial(block);
+		GLfloat nx = block->position->x;
+		GLfloat ny = block->position->y;
+		GLfloat nz = block->position->z;
+		glTranslatef(nx, ny, nz);
+		glScalef(block->size->x / ancestor->size->x, block->size->y / ancestor->size->y, block->size->z / ancestor->size->z);
+		if (block->shapeType == 1)
+			glutSolidCube(1.0);
+		else
+			glutSolidSphere(1.0, 50, 50);
+		glRotatef(block->rotateAngle, block->rotation->x, block->rotation->y, block->rotation->z);
+		vector<AttachData> atch = *(block->attached);
+		for (auto a : atch)
+			DrawBlocksRecursive(a.block, block);
+	}
+	glPopMatrix();
+}
+#pragma endregion
+
+
+void RenderRobot()
+{
+	for (auto blk : blocks) {
+		DrawBlocksRecursive(blk);
+	}
+}
 
 void InitOpenGL()
 {
@@ -268,11 +360,9 @@ void InitOpenGL()
 	// 조명 모델 활성화
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);	
-	float mat0_ambient[] = { 0.3, 0.0, 0.0 };
-	float mat0_specular[] = { 0.9, 0.9, 0.9 };
-	float mat0_shininess = 20;
+	float mat0_ambient[] = { 0.3, 0.5, 0.3 };
+	float mat0_shininess = 40;
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat0_ambient);
-	//glMaterialfv(GL_FRONT, GL_SPECULAR, mat0_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, &mat0_shininess);
 }
 
@@ -296,137 +386,53 @@ void Render()
 	glutSwapBuffers();
 }
 
-void RenderRobot()
-{
-	//glMatrixMode(GL_MODELVIEW);
-	//glLoadIdentity();
-	for (auto blk : blocks) {
-		DrawBlocksRecursive(blk);
-		////GiveMaterial(blk);
-		//if (blk.shapeType == 1)
-		//	DrawBlock(blk);
-		//else
-		//	DrawSphere(blk);
-	}
-}
-
-void DrawBlocksRecursive(Block* block, Block* ancestor, GLfloat over) {
-	//cout << "r - block generate push matrix : " << block->textureType << endl;
-	glPushMatrix();
-	{
-		GiveMaterial(block);
-		//glTranslatef(block->position->x, block->position->y , block->position->z);
-		GLfloat nx = block->position->x;//(block->size->x + ancestor->size->x) / 2 + block->position->x;
-		GLfloat ny =  block->position->y;
-		//GLfloat ny = (block->size->y + over) / 2 + block->position->y;
-		GLfloat nz = block->position->z;//(block->size->z + ancestor->size->z) / 2 + block->position->z;
-		glTranslatef(nx, ny, nz);
-		/*glTranslatef((block->size->x + ancestor->size->x) / 2 + block->position->x,
-			(block->size->y + ancestor->size->y) / 2 + block->position->y,
-			(block->size->z + ancestor->size->z) / 2 + block->position->z);*/
-		glScalef(block->size->x/ancestor->size->x, block->size->y/ancestor->size->y, block->size->z/ancestor->size->z);
-		if (block->shapeType == 1)
-			glutSolidCube(1.0);
-		else
-			glutSolidSphere(1.0, 50, 50);
-		glRotatef(block->rotateAngle, block->rotation->x, block->rotation->y, block->rotation->z);
-		vector<AttachData> atch = *(block->attached);
-		//block->size->y = ny - block->position->y;
-		for (auto a : atch)
-			DrawBlocksRecursive(a.block,block, block->size->y +over);
-	}
-	glPopMatrix();
-	//cout << "r - block generate pop matrix : " << block->textureType << endl;
-}
-
-void DrawBlocksRecursive(Block* block) {
-	//cout << "block generate push matrix : " << block->textureType << endl;
-	glPushMatrix();
-	{
-		GiveMaterial(block);
-		glTranslatef(block->position->x, block->position->y, block->position->z);
-		glScalef(block->size->x, block->size->y, block->size->z);
-		if (block->shapeType == 1)
-			glutSolidCube(1.0);
-		else
-			glutSolidSphere(1.0, 50, 50);
-		glRotatef(block->rotateAngle, block->rotation->x, block->rotation->y, block->rotation->z);
-		vector<AttachData> atch = *(block->attached);
-		for (auto a : atch)
-			DrawBlocksRecursive(a.block,block,  block->size->y);
-	}
-	glPopMatrix();
-	//cout << "block generate pop matrix : " << block->textureType << endl;
-}
-
-//void DrawBlock(Block block) {
-//	glPushMatrix();
-//	GiveMaterial(block);
-//	glTranslatef(block.position.x, block.position.y, block.position.z);
-//	glRotatef(block.rotateAngle, block.rotation.x, block.rotation.y, block.rotation.z);
-//	glScalef(block.size.x, block.size.y, block.size.z);
-//	glutSolidCube(1.0);
-//	glPopMatrix();
-//}
-//
-//void DrawSphere(Block block) {
-//	glPushMatrix();
-//	GiveMaterial(block);
-//	glTranslatef(block.position.x, block.position.y, block.position.z);
-//	glRotatef(block.rotateAngle, block.rotation.x, block.rotation.y, block.rotation.z);
-//	glScalef(block.size.x, block.size.y, block.size.z);
-//	glutSolidSphere(1.0,50,50);
-//	glPopMatrix();
-//}
-
+/// <summary>
+/// 123456 + 0 키보드 입력 받아서 처리
+/// </summary>
+/// <param name="key"></param>
+/// <param name="x"></param>
+/// <param name="y"></param>
 void Keyboard(unsigned char key, int x, int y)
 {
 	AttachData* target = NULL;
 	AttachData* subTarget = NULL;
-	//JointType jointType = NotJoint;
 	float value = 0;
-	cout << "pressed key " << key << endl;
 	switch (key)
 	{
 		case '1':
 		case '2':
 			target = rotater;
-			//jointType = Rotate;
-			value = key == '1' ? 1 : -1;
+			value = key == '1' ? -1 : 1;
 			break;
 		case '3':
 		case '4':
 			target = ball;
-			//jointType = Ball;
-			value = key == '3' ? 1 : -1;
+			value = key == '3' ? -1 : 1;
 			break;
 		case '5':
 		case '6':
 			target = sliderL;
 			subTarget = sliderR;
-			//jointType = Slide;
 			value = key == '5' ? 0.05 : -0.05;
 			break;
 		case '0':
 			if (ball != NULL && sliderL != NULL && sliderR != NULL && rotater != NULL) {
 				ball->block->rotateAngle = 0;
-				sliderL->block->position->x = sliderL->attachedPosition->x * -1;
-				sliderR->block->position->x = sliderR->attachedPosition->x * -1;
+				sliderL->block->position->x = sliderL->jointLimits->x * -1;
+				sliderR->block->position->x = sliderR->jointLimits->x * -1;
 				rotater->block->rotateAngle = 0;
 			}
-			//return;
 		default:
 			break;
 	}
 
 	if (target != NULL) {
-		if (target->jointType == Ball || target->jointType == Rotate) {
+		if (target->jointType == Vertical || target->jointType == Horizontal) {
 			target->block->rotateAngle += value;
 		}
 		else if (target->jointType == Slide) {
 			auto curPos = abs(target->block->position->x);
-			auto maxPos = value >0 ? abs(target->attachedPosition->y) : abs(target->attachedPosition->x);
-			//auto minPos = abs(target->attachedPosition->y);
+			auto maxPos = value >0 ? abs(target->jointLimits->y) : abs(target->jointLimits->x);
 
 			if (value > 0) {
 				if (abs (curPos-maxPos) > 0.1) {
@@ -458,8 +464,6 @@ void drawCube(float sx, float sy, float sz)
 	glutSolidCube(1.0);
 	glPopMatrix();
 }
-
-
 
 void Reshape(int w, int h)
 {
