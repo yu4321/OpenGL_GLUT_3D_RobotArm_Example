@@ -229,7 +229,6 @@ void InitializeBlocks()
 	AttachData* data4A = new AttachData(upper->position, clawL, Slide);
 	data4A->jointLimits = new Vector3(-0.5, -0.05, 0);
 
-
 	Block* clawR = new Block();
 	clawR->position = new Vector3(0.5, 0.7, 0);
 	clawR->size = new Vector3(0.1, 2, 1.0);
@@ -455,34 +454,6 @@ void Keyboard(unsigned char key, int x, int y)
 			}
 		}
 	}
-
-	//if (target != NULL) {
-	//	if (target->jointType == Vertical || target->jointType == Horizontal) {
-	//		target->block->rotateAngle += value;
-	//	}
-	//	else if (target->jointType == Slide) {
-	//		auto curPos = abs(target->block->position->x);
-	//		auto maxPos = value >0 ? abs(target->jointLimits->y) : abs(target->jointLimits->x);
-
-	//		if (value > 0) {
-	//			if (abs (curPos-maxPos) > 0.05) {
-	//				target->block->position->x += value;
-	//				subTarget->block->position->x -= value;
-	//			}
-	//			else {
-	//				target->block->position->x = -maxPos;
-	//				subTarget->block->position->x = maxPos;
-	//			}
-	//		}
-	//		else {
-	//			if (curPos < maxPos) {
-	//				target->block->position->x += value;
-	//				subTarget->block->position->x -= value;
-	//			}
-
-	//		}
-	//	}
-	//}
 	glutPostRedisplay();
 }
 
