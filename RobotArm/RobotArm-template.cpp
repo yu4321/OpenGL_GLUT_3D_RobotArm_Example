@@ -255,36 +255,36 @@ void InitializeBlocks()
 void GiveMaterial(Block* blk)
 {
 	switch (blk->textureType) {
-	case 1: {
-		float mat0_diffuse[] = { 0.6, 0.6, 0.0 };
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-		break;
-	}
-	case 2: {
-		float mat0_diffuse[] = { 0.5, 0.6, 0.5 };
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-		break;
-	}
-	case 3: {
-		float mat0_diffuse[] = { 0.1, 0.1, 0.7 };
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-		break;
-	}
-	case 4: {
-		float mat0_diffuse[] = { 0.7, 0.0, 1.0 };
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-		break;
-	}
-	case 5: {
-		float mat0_diffuse[] = { 0.1, 0.1, 0.1 };
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-		break;
-	}
-	default: {
-		float mat0_diffuse[] = { 0, 0, 0 };
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-		break;
-	}
+		case 1: {
+			float mat0_diffuse[] = { 0.6, 0.6, 0.0 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 2: {
+			float mat0_diffuse[] = { 0.5, 0.6, 0.5 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 3: {
+			float mat0_diffuse[] = { 0.1, 0.1, 0.7 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 4: {
+			float mat0_diffuse[] = { 0.7, 0.0, 1.0 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 5: {
+			float mat0_diffuse[] = { 0.1, 0.1, 0.1 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		default: {
+			float mat0_diffuse[] = { 0, 0, 0 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
 	}
 }
 
@@ -435,21 +435,16 @@ void Keyboard(unsigned char key, int x, int y)
 
 				//Á¼È÷±â
 				if (value < 0) {
-					if (abs(curPos - minPos) > 0.05) {
+					if (abs(curPos - minPos) > 0.05) 
 						j->block->position->x -= value * -inverse;
-					}
-					else {
+					else 
 						j->block->position->x = minPos;
-					}
 				}
 				else {
-					if (abs(curPos - maxPos) > 0.05) {
+					if (abs(curPos - maxPos) > 0.05)
 						j->block->position->x += value * inverse;
-					}
-					else {
+					else 
 						j->block->position->x = maxPos;
-					}
-
 				}
 			}
 		}
