@@ -163,6 +163,7 @@ void InitializeBlocks()
 	base->size = new Vector3(10, 1, 10);
 	base->shapeType = 1;
 	base->textureType = 1;
+	base->rotation = new Vector3(0, 1, 0);
 	blocks.push_back(base);
 
 	Block* lower = new Block();
@@ -173,7 +174,8 @@ void InitializeBlocks()
 	lower->rotation = new Vector3(0, 1, 0);
 
 	AttachData data1(base->position, lower, Rotate);
-	rotater = lower;
+
+	rotater = base;
 	
 
 	Block* center = new Block();
@@ -310,7 +312,7 @@ void RenderRobot()
 }
 
 void DrawBlocksRecursive(Block* block, Block* ancestor, GLfloat over) {
-	cout << "r - block generate push matrix : " << block->textureType << endl;
+	//cout << "r - block generate push matrix : " << block->textureType << endl;
 	glPushMatrix();
 	{
 		GiveMaterial(block);
@@ -335,11 +337,11 @@ void DrawBlocksRecursive(Block* block, Block* ancestor, GLfloat over) {
 			DrawBlocksRecursive(a.block,block, block->size->y +over);
 	}
 	glPopMatrix();
-	cout << "r - block generate pop matrix : " << block->textureType << endl;
+	//cout << "r - block generate pop matrix : " << block->textureType << endl;
 }
 
 void DrawBlocksRecursive(Block* block) {
-	cout << "block generate push matrix : " << block->textureType << endl;
+	//cout << "block generate push matrix : " << block->textureType << endl;
 	glPushMatrix();
 	{
 		GiveMaterial(block);
@@ -355,7 +357,7 @@ void DrawBlocksRecursive(Block* block) {
 			DrawBlocksRecursive(a.block,block,  block->size->y);
 	}
 	glPopMatrix();
-	cout << "block generate pop matrix : " << block->textureType << endl;
+	//cout << "block generate pop matrix : " << block->textureType << endl;
 }
 
 //void DrawBlock(Block block) {
@@ -381,8 +383,10 @@ void DrawBlocksRecursive(Block* block) {
 void Keyboard(unsigned char key, int x, int y)
 {
 	Block* target = NULL;
+	Block* subTarget = NULL;
 	JointType jointType = NotJoint;
 	float value = 0;
+	cout << "pressed key " << key << endl;
 	switch (key)
 	{
 		case '1':
@@ -399,9 +403,10 @@ void Keyboard(unsigned char key, int x, int y)
 			break;
 		case '5':
 		case '6':
-			target = sliderR;
+			target = sliderL;
+			subTarget = sliderR;
 			jointType = Slide;
-			value = key == '5' ? 0.1 : -0.1;
+			value = 0.1;
 			break;
 		default:
 			break;
@@ -410,6 +415,9 @@ void Keyboard(unsigned char key, int x, int y)
 	if (target != NULL) {
 		if (jointType == Ball || jointType == Rotate) {
 			target->rotateAngle += value;
+		}
+		else if (jointType == Slide) {
+
 		}
 	}
 	glutPostRedisplay();
