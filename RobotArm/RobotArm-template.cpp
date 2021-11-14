@@ -3,6 +3,7 @@
 #include <cmath>
 #include "..\include\GL\freeglut.h"
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -29,10 +30,11 @@ public:
 
 class Block {
 public:
-	vector<AttachData> attached;
+	vector<AttachData>* attached=new vector<AttachData>();
 	Vector3 size;
 	Vector3 position;
 	Vector3 rotation;
+	float rotateAngle;
 	int textureType;
 	int shapeType;
 };
@@ -93,6 +95,9 @@ void Cross(double out[3], double a[3], double b[3]);
 void DrawBlock(Block block);
 void DrawSphere(Block block);
 void InitializeBlocks();
+void GiveMaterial(Block blk);
+void DrawBlocksRecursive(Block block);
+void DrawBlocksRecursive(Block block, Block ancestor );
 
 //추가 구현 변수들
 vector<Block> blocks;
@@ -149,7 +154,97 @@ int main(int argc, char **argv)
 
 void InitializeBlocks() 
 {
+	// 구현 하세요.
+	Block base;
+	base.position = Vector3(0, 0.5, 0);
+	base.size = Vector3(10, 1, 10);
+	base.shapeType = 1;
+	base.textureType = 1;
+	blocks.push_back(base);
 
+	Block lower;
+	lower.position = Vector3(0, 0, 0);
+	lower.size = Vector3(1, 5, 1);
+	lower.shapeType = 1;
+	lower.textureType = 2;
+
+	AttachData data1(base.position, lower, NotJoint);
+	//blocks.push_back(lower);
+
+	Block center;
+	center.shapeType = 2;
+	center.position = Vector3(0, 6, 0);
+	center.size = Vector3(1, 1, 1);
+	center.textureType = 3;
+	AttachData data2(lower.position, center, Ball);
+	//blocks.push_back(center);
+
+	Block upper;
+	upper.position = Vector3(0, 8.5, 0);
+	upper.size = Vector3(1, 5, 1);
+	upper.shapeType = 1;
+	upper.textureType = 4;
+	AttachData data3(center.position, upper, NotJoint);
+	//blocks.push_back(upper);
+
+	Block clawL;
+	clawL.position = Vector3(-0.5, 12, 0);
+	clawL.size = Vector3(0.1, 2, 1.0);
+	clawL.shapeType = 1;
+	clawL.textureType = 5;
+	AttachData data4A(upper.position, clawL, Slide);
+	//blocks.push_back(clawL);
+
+
+	Block clawR;
+	clawR.position = Vector3(0.5, 12, 0);
+	clawR.size = Vector3(0.1, 2, 1.0);
+	clawR.shapeType = 1;
+	clawR.textureType = 6;
+	AttachData data4B(upper.position, clawR, Slide);
+
+	upper.attached->push_back(data4A); upper.attached->push_back(data4B);
+	center.attached->push_back(data3);
+	lower.attached->push_back(data2);
+	base.attached->push_back(data1);
+	blocks.push_back(base);
+	//blocks.push_back(clawR);
+}
+
+void GiveMaterial(Block blk) 
+{
+	switch (blk.textureType) {
+		case 1: {
+			float mat0_diffuse[] = { 0.6, 0.6, 0.0 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 2: {
+			float mat0_diffuse[] = { 0.5, 0.6, 0.5 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 3: {
+			float mat0_diffuse[] = { 0.1, 0.1, 0.7 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 4: {
+			float mat0_diffuse[] = { 0.7, 0.0, 1.0 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 5: {
+			float mat0_diffuse[] = { 1.0, 1.0, 1.0 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+		case 6: {
+			float mat0_diffuse[] = { 0, 0, 0 };
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
+			break;
+		}
+	}
 }
 
 
@@ -191,98 +286,66 @@ void Render()
 
 void RenderRobot()
 {
-	vector<Block> blks;
-	// 구현 하세요.
-	Block base;
-	base.position = Vector3(0, 0.5, 0);
-	base.size = Vector3(10, 1, 10);
-	base.shapeType = 1;
-	base.textureType = 1;
-	blks.push_back(base);
-
-	Block lower;
-	lower.position = Vector3(0, 3.5, 0);
-	lower.size = Vector3(1, 5, 1);
-	lower.shapeType = 1;
-	lower.textureType = 2;
-	blks.push_back(lower);
-
-	Block center;
-	center.shapeType = 2;
-	center.position = Vector3(0, 6, 0);
-	center.size = Vector3(1, 1, 1);
-	center.textureType = 3;
-	blks.push_back(center);
-
-	Block upper;
-	upper.position = Vector3(0, 8.5, 0);
-	upper.size = Vector3(1, 5, 1);
-	upper.shapeType = 1;
-	upper.textureType = 4;
-	blks.push_back(upper);
-
-	Block clawL;
-	clawL.position = Vector3(-0.5, 12, 0);
-	clawL.size = Vector3(0.1, 2, 1.0);
-	clawL.shapeType = 1;
-	clawL.textureType = 5;
-	blks.push_back(clawL);
-
-
-	Block clawR;
-	clawR.position = Vector3(0.5, 12, 0);
-	clawR.size = Vector3(0.1, 2, 1.0);
-	clawR.shapeType = 1;
-	clawR.textureType = 6;
-	blks.push_back(clawR);
-
-
-	for (auto blk : blks) {
-		switch (blk.textureType) {
-		case 1: {
-			float mat0_diffuse[] = { 0.6, 0.6, 0.0 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-			}
-		case 2: {
-			float mat0_diffuse[] = { 0.5, 0.6, 0.5 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-			}
-		case 3: {
-			float mat0_diffuse[] = { 0.1, 0.1, 0.7 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-			}
-		case 4: {
-			float mat0_diffuse[] = { 0.7, 0.0, 1.0 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-			}
-		case 5: {
-			float mat0_diffuse[] = { 1.0, 1.0, 1.0 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-			}
-		case 6:{
-			float mat0_diffuse[] = { 0, 0, 0 };
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat0_diffuse);
-			break;
-			}
-		}
-		if (blk.shapeType == 1)
-			DrawBlock(blk);
-		else
-			DrawSphere(blk);
+	//glMatrixMode(GL_MODELVIEW);
+	//glLoadIdentity();
+	for (auto blk : blocks) {
+		DrawBlocksRecursive(blk);
+		////GiveMaterial(blk);
+		//if (blk.shapeType == 1)
+		//	DrawBlock(blk);
+		//else
+		//	DrawSphere(blk);
 	}
-	//DrawBlock(base);
+}
 
-	//drawCube(10.0f, 1.0f, 10.0f);
+void DrawBlocksRecursive(Block block, Block ancestor) {
+	cout << "r - block generate push matrix : " << block.textureType << endl;
+	glPushMatrix();
+	{
+		GiveMaterial(block);
+		//glTranslatef(block.position.x, block.position.y , block.position.z);
+		glTranslatef(block.position.x, (block.size.y + ancestor.size.y) /2, block.position.z);
+		glRotatef(block.rotateAngle, block.rotation.x, block.rotation.y, block.rotation.z);
+		glScalef(block.size.x/ancestor.size.x, block.size.y/ancestor.size.y, block.size.z/ancestor.size.z);
+		if (block.shapeType == 1)
+			glutSolidCube(1.0);
+		else
+			glutSolidSphere(1.0, 50, 50);
+
+		vector<AttachData> atch = *(block.attached);
+		for (auto a : atch)
+			DrawBlocksRecursive(a.block,block);
+	}
+	glPopMatrix();
+	cout << "r - block generate pop matrix : " << block.textureType << endl;
+}
+
+void DrawBlocksRecursive(Block block) {
+	cout << "block generate push matrix : " << block.textureType << endl;
+	glPushMatrix();
+	{
+		GiveMaterial(block);
+		glTranslatef(block.position.x, block.position.y, block.position.z);
+		glRotatef(block.rotateAngle, block.rotation.x, block.rotation.y, block.rotation.z);
+		glScalef(block.size.x, block.size.y, block.size.z);
+		if (block.shapeType == 1)
+			glutSolidCube(1.0);
+		else
+			glutSolidSphere(1.0, 50, 50);
+
+		vector<AttachData> atch = *(block.attached);
+		for (auto a : atch)
+			DrawBlocksRecursive(a.block,block);
+	}
+	glPopMatrix();
+	cout << "block generate pop matrix : " << block.textureType << endl;
 }
 
 void DrawBlock(Block block) {
 	glPushMatrix();
+	GiveMaterial(block);
 	glTranslatef(block.position.x, block.position.y, block.position.z);
+	glRotatef(block.rotateAngle, block.rotation.x, block.rotation.y, block.rotation.z);
 	glScalef(block.size.x, block.size.y, block.size.z);
 	glutSolidCube(1.0);
 	glPopMatrix();
@@ -290,7 +353,9 @@ void DrawBlock(Block block) {
 
 void DrawSphere(Block block) {
 	glPushMatrix();
+	GiveMaterial(block);
 	glTranslatef(block.position.x, block.position.y, block.position.z);
+	glRotatef(block.rotateAngle, block.rotation.x, block.rotation.y, block.rotation.z);
 	glScalef(block.size.x, block.size.y, block.size.z);
 	glutSolidSphere(1.0,50,50);
 	glPopMatrix();
